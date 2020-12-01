@@ -1,0 +1,266 @@
+#!/usr/bin/env python
+#
+#This file is part of "jiffy".
+#
+#Project: jiffy: A product for building and managing infrastructure: 
+#cloud provider services, and servers and their configurations.
+#
+#Description: A product for building and managing infrastructure. 
+#This includes third party API calls for services such as virtual
+#cloud servers, load balancers, databases, and other. The product 
+#manages connectivity and appropriate communication among these 
+#aws.
+#
+#Copyright (C) Gary Leong - All Rights Reserved
+#Unauthorized copying of this file, via any medium is strictly prohibited
+#Proprietary and confidential
+#Written by Gary Leong  <gwleong@gmail.com, June 17,2020
+
+#import jinja2
+import os
+import json
+import sys
+#from time import sleep
+
+from ed_helper_publisher.loggerly import ElasticDevLogger
+from ed_helper_publisher.resource_manage import ResourceCmdHelper
+#from ed_helper_publisher.output import convert_ed_output_to_values
+
+class MissingEnvironmentVariable(Exception):
+    pass
+
+def get_env_var(variable,default=None,must_exists=None):
+
+    _value = os.environ.get(variable)
+    if _value: return _value
+
+    if default: return default
+
+    if not must_exists: return
+
+    raise MissingEnvironmentVariable("{} does not exist".format(variable))
+
+class Main(ResourceCmdHelper):
+
+    def __init__(self,**kwargs):
+
+        ResourceCmdHelper.__init__(self)
+
+        self.app_name = 'ansible'
+        self.classname = '{}Wrapper'.format(self.app_name)
+
+        self.logger = ElasticDevLogger(self.classname,logcategory="cloudprovider")
+        self.logger.debug("Instantiating %s" % self.classname)
+
+        self.working_subdir = get_env_var("{}_DIR".format(self.app_name.upper()),default="/var/tmp/{}".format(self.app_name))
+        self.shelloutconfig = "elasticdev:::{}::resource_wrapper".format(self.app_name)
+
+        # The docker image to execute files
+        self.docker_image = get_env_var("DOCKER_EXEC_ENV",default="elasticdev/{}-run-env".format(self.app_name))
+
+        self.exec_ymls = get_env_var("{}_EXEC_YMLS".format(self.app_name.upper()),must_exists=True)
+
+        self.use_docker = get_env_var("USE_DOCKER")
+
+        # The shared directory is the location in the worker that is temporarily shared with the 
+        # Docker execution container.  This is only used if USE_DOCKER is True.
+        self.share_dir = get_env_var("SHARE_DIR",default="/var/tmp/share")
+
+        # The state_id is typically automated and provided by the stack calling this script.
+        self.stateful_id = get_env_var("STATEFUL_ID",must_exists=True)
+
+        # stateful_dir
+        self.stateful_dir = get_env_var("STATEFUL_DIR")
+
+        # run_share_dir
+        if self.stateful_id:
+            self.run_share_dir = os.path.join(self.share_dir,self.stateful_id)
+        else:
+            self.run_share_dir = self.share_dir
+
+        self.run_dir = os.getcwd()
+        self.app_dir = os.path.join(self.run_dir,self.working_subdir)
+
+    def _execute(self,cmd,output_to_json=False,exit_error=True,**kwargs):
+        return self.execute(cmd,output_to_json=output_to_json,exit_error=exit_error)
+        #return self.execute4(cmd,output_to_json=output_to_json,exit_error=exit_error)
+
+    def _format_output(self,**kwargs):
+
+        results = []
+
+        output = kwargs["output"]
+        output_to_json= kwargs.get("output_to_json")
+
+        for _output in output:
+            if not _output.strip(): continue
+            results.append(_output)
+
+        if not output_to_json: return results
+
+        return json.loads(results)
+
+    def _add_tags(self,resource):
+
+        tags = get_env_var("RESOURCE_TAGS")
+        if not tags: return
+
+        tags = [ tag.strip() for tag in tags.split(",") ]
+        if not isinstance(resource.get("tags"),list): resource["tags"] = []
+        resource["tags"].extend(tags)
+        resource["tags"].append("ansible")
+
+        # remove duplicates
+        resource["tags"] = list(set(resource["tags"]))
+ 
+        return resource
+
+    def _exec_local_create(self):
+
+        os.chdir(self.app_dir)
+
+        base_cmd = 'ansible-playbook -i hosts'
+
+        for _yml in self.exec_ymls.split(","):
+            cmd = "{} {}".format(base_cmd,_yml)
+            results = self._execute(cmd,output_to_json=False,exit_error=True)
+            if not results.get("output"): continue
+            self.logger.debug(results["output"])
+
+        return 
+
+    def _get_env_filepath(self):
+
+        _docker_env_file = get_env_var("DOCKER_ENV_FILE",default=".env")
+        self.docker_env_file = os.path.join(os.getcwd(),_docker_env_file)
+
+        return self.docker_env_file
+
+    def _create_env_file(self):
+
+        docker_env_fields = get_env_var("DOCKER_ENV_FIELDS")
+        self._get_env_filepath()
+
+        if not docker_env_fields: 
+            self.logger.debug("No docker env fields specifield - skipping to create environment file")
+            return
+
+        f = open(self.docker_env_file,"w")
+
+        f.write("{}={}".format("ANSIBLE_EXEC_YMLS",self.exec_ymls))
+
+        self.logger.debug("Writing environment file {} with field {}".format(self.docker_env_file,docker_env_fields))
+
+        for docker_env_field in docker_env_fields.split(","):
+            if not os.environ.get(docker_env_field.strip().upper()): continue
+            f.write("\n")
+            f.write("{}={}".format(docker_env_field.strip().upper(),os.environ[docker_env_field.strip().upper()]))
+
+        f.close()
+
+        return self.docker_env_file
+
+    def _exec_docker_run(self):
+
+        self._create_env_file()
+
+        os.chdir(self.run_share_dir)
+
+        if os.path.exists(self.docker_env_file):
+            cmd = 'docker run -e ANSIBLE_EXEC_YMLS="{}" --env-file {} --rm -v {}:{} {}'.format(self.exec_ymls,
+                                                                                               self.docker_env_file,
+                                                                                               self.run_share_dir,
+                                                                                               self.share_dir,
+                                                                                               self.docker_image)
+        else:
+            cmd = 'docker run -e ANSIBLE_EXEC_YMLS="{}" --rm -v {}:{} {}'.format(self.exec_ymls,
+                                                                                 self.run_share_dir,
+                                                                                 self.share_dir,
+                                                                                 self.docker_image)
+
+        self.logger.debug(cmd)
+
+        return self._execute(cmd,output_to_json=False,exit_error=False)
+
+    def create(self):
+
+        if self.use_docker and not self.stateful_id:
+            self.logger.error("STATEFUL_ID needs to be set for using of docker run environments")
+            exit(9)
+
+        if not os.path.exists(self.app_dir):
+            self.logger.warn("ansible directory must exists at {} - something went wrong".format(self.app_dir))
+            os.chdir(self.run_dir)
+            exit(9)
+
+        if self.inputargs.get("use_docker"): 
+            results = self._exec_docker_run()
+        else:
+            results = self._exec_local_create()
+
+        if results.get("output"):
+            self.logger.debug(results.get("output"))
+
+        os.chdir(self.run_dir)
+
+def usage():
+
+    print """
+script + environmental variables
+
+or
+
+script + json_input (as argument)
+
+environmental variables:
+
+    basic:
+        USE_DOCKER (optional for USE_DOCKER) - use docker container for execution
+        STATEFUL_ID (needed for USE_DOCKER) - the stateful_id to reference the state of the execution
+        DOCKER_ENV_FIELDS (optional for USE_DOCKER) - the environmental keys to create environmental file 
+        DOCKER_EXEC_ENV (default elasticdev/ansible-run-env) - the docker container/image to run execution
+        DOCKER_ENV_FILE (default .env) - name of the docker env file to create
+        SHARE_DIR (default is /var/tmp/share) - the shared directory that is shared with the worker during docker container execution
+        METHOD - create
+
+        ANSIBLE_DIR (optional) - we use the ansible directory relative to execution directory
+        WORKING_SUBDIR (optional) - if ANSIBLE_DIR not set, we use the WORKING_SUBDIR to reference ansible build environment
+
+    create:
+        RESOURCE_TYPE
+        RESOURCE_TAGS
+
+       """
+    exit(4)
+
+if __name__ == '__main__':
+
+    try:
+        json_input = sys.argv[1]
+    except:
+        json_input = None
+
+    main = Main()
+
+    if json_input:
+        main.set_inputargs(json_input=json_input)
+    else:
+        set_env_vars = [ "method",
+                         "use_docker",
+                         "working_dir",
+                         "ansible_dir",
+                         "resource_type",
+                         "resource_tags" ]
+
+        main.set_inputargs(set_env_vars=set_env_vars)
+   
+    method = main.inputargs.get("method")
+    if not method: method = "create"
+
+    if method == "create":
+        main.create()
+
+    else:
+        usage()
+        print 'method "{}" not supported!'.format(method)
+        exit(4)
