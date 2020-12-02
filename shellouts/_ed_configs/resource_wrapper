@@ -191,6 +191,8 @@ class Main(ResourceCmdHelper):
 
         os.chdir(self.run_dir)
 
+        if results.get("status") is False: exit(19)
+
 def usage():
 
     print """
