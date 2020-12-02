@@ -75,14 +75,14 @@ class Main(ResourceCmdHelper):
         # stateful_dir
         self.stateful_dir = get_env_var("STATEFUL_DIR")
 
+        self.run_dir = os.getcwd()
+
         # run_share_dir
         if self.stateful_id:
-            self.run_share_dir = os.path.join(self.share_dir,self.stateful_id)
+            #self.run_share_dir = os.path.join(self.share_dir,self.stateful_id)
+            self.app_dir = os.path.join(self.share_dir,self.stateful_id)
         else:
-            self.run_share_dir = self.share_dir
-
-        self.run_dir = os.getcwd()
-        self.app_dir = "{}/{}".format(self.run_share_dir,self.working_subdir)
+            self.app_dir = "{}/{}".format(self.run_dir,self.working_subdir)
 
     #def _execute(self,cmd,output_to_json=False,exit_error=True,**kwargs):
     #    return self.execute(cmd,output_to_json=output_to_json,exit_error=exit_error)
@@ -152,17 +152,17 @@ class Main(ResourceCmdHelper):
 
         self._create_env_file()
 
-        os.chdir(self.run_share_dir)
+        os.chdir(self.app_dir)
 
         if os.path.exists(self.docker_env_file):
             cmd = 'docker run -e ANSIBLE_EXEC_YMLS="{}" --env-file {} --rm -v {}:{} {}'.format(self.exec_ymls,
                                                                                                self.docker_env_file,
-                                                                                               self.run_share_dir,
+                                                                                               self.app_dir,
                                                                                                self.share_dir,
                                                                                                self.docker_image)
         else:
             cmd = 'docker run -e ANSIBLE_EXEC_YMLS="{}" --rm -v {}:{} {}'.format(self.exec_ymls,
-                                                                                 self.run_share_dir,
+                                                                                 self.app_dir,
                                                                                  self.share_dir,
                                                                                  self.docker_image)
 
