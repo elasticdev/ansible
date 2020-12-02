@@ -54,6 +54,8 @@ class Main(ResourceCmdHelper):
         self.logger.debug("Instantiating %s" % self.classname)
 
         self.working_subdir = get_env_var("{}_DIR".format(self.app_name.upper()),default="/var/tmp/{}".format(self.app_name))
+        if self.working_subdir[0] == "/": self.working_subdir = self.working_subdir[1:]
+
         self.shelloutconfig = "elasticdev:::{}::resource_wrapper".format(self.app_name)
 
         # The docker image to execute files
