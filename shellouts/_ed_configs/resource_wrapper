@@ -17,10 +17,11 @@
 #Written by Gary Leong  <gwleong@gmail.com, June 17,2020
 
 #import jinja2
-import os
-import json
-import sys
 #from time import sleep
+#import json
+
+import os
+import sys
 
 from ed_helper_publisher.loggerly import ElasticDevLogger
 from ed_helper_publisher.resource_manage import ResourceCmdHelper
@@ -81,24 +82,9 @@ class Main(ResourceCmdHelper):
         self.run_dir = os.getcwd()
         self.app_dir = os.path.join(self.run_dir,self.working_subdir)
 
-    def _execute(self,cmd,output_to_json=False,exit_error=True,**kwargs):
-        return self.execute(cmd,output_to_json=output_to_json,exit_error=exit_error)
-        #return self.execute4(cmd,output_to_json=output_to_json,exit_error=exit_error)
-
-    def _format_output(self,**kwargs):
-
-        results = []
-
-        output = kwargs["output"]
-        output_to_json= kwargs.get("output_to_json")
-
-        for _output in output:
-            if not _output.strip(): continue
-            results.append(_output)
-
-        if not output_to_json: return results
-
-        return json.loads(results)
+    #def _execute(self,cmd,output_to_json=False,exit_error=True,**kwargs):
+    #    return self.execute(cmd,output_to_json=output_to_json,exit_error=exit_error)
+    #    return self.execute4(cmd,output_to_json=output_to_json,exit_error=exit_error)
 
     def _add_tags(self,resource):
 
@@ -123,7 +109,7 @@ class Main(ResourceCmdHelper):
 
         for _yml in self.exec_ymls.split(","):
             cmd = "{} {}".format(base_cmd,_yml)
-            results = self._execute(cmd,output_to_json=False,exit_error=True)
+            results = self.execute(cmd,output_to_json=False,exit_error=True)
             if not results.get("output"): continue
             self.logger.debug(results["output"])
 
@@ -180,7 +166,7 @@ class Main(ResourceCmdHelper):
 
         self.logger.debug(cmd)
 
-        return self._execute(cmd,output_to_json=False,exit_error=False)
+        return self.execute(cmd,output_to_json=False,exit_error=False)
 
     def create(self):
 
