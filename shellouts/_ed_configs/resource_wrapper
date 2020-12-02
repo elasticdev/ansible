@@ -80,7 +80,8 @@ class Main(ResourceCmdHelper):
             self.run_share_dir = self.share_dir
 
         self.run_dir = os.getcwd()
-        self.app_dir = os.path.join(self.run_dir,self.working_subdir)
+        #self.app_dir = os.path.join(self.run_dir,self.working_subdir)
+        self.app_dir = os.path.join(self.run_share_dir,self.working_subdir)
 
     #def _execute(self,cmd,output_to_json=False,exit_error=True,**kwargs):
     #    return self.execute(cmd,output_to_json=output_to_json,exit_error=exit_error)
