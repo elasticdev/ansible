@@ -30,15 +30,23 @@ from ed_helper_publisher.resource_manage import ResourceCmdHelper
 class MissingEnvironmentVariable(Exception):
     pass
 
-def get_env_var(variable,default=None,must_exists=None):
+def get_ans_env_var(variable,default=None,must_exists=None):
 
     _value = os.environ.get(variable)
+    if _value: return _value
+
+    _value = os.environ.get("ANS_VAR_{}".format(variable))
+    if _value: return _value
+
+    _value = os.environ.get("ANS_VAR_{}".format(variable.lower()))
+    if _value: return _value
+
+    _value = os.environ.get("ANS_VAR_{}".format(variable.upper()))
     if _value: return _value
 
     if default: return default
 
     if not must_exists: return
-
     raise MissingEnvironmentVariable("{} does not exist".format(variable))
 
 class Main(ResourceCmdHelper):
@@ -53,27 +61,27 @@ class Main(ResourceCmdHelper):
         self.logger = ElasticDevLogger(self.classname,logcategory="cloudprovider")
         self.logger.debug("Instantiating %s" % self.classname)
 
-        self.working_subdir = get_env_var("{}_DIR".format(self.app_name.upper()),default="/var/tmp/{}".format(self.app_name))
+        self.working_subdir = get_ans_env_var("{}_DIR".format(self.app_name.upper()),default="/var/tmp/{}".format(self.app_name))
         if self.working_subdir[0] == "/": self.working_subdir = self.working_subdir[1:]
 
         self.shelloutconfig = "elasticdev:::{}::resource_wrapper".format(self.app_name)
 
         # The docker image to execute files
-        self.docker_image = get_env_var("DOCKER_EXEC_ENV",default="elasticdev/{}-run-env".format(self.app_name))
+        self.docker_image = get_ans_env_var("DOCKER_EXEC_ENV",default="elasticdev/{}-run-env".format(self.app_name))
 
-        self.exec_ymls = get_env_var("{}_EXEC_YMLS".format(self.app_name.upper()),must_exists=True)
+        self.exec_ymls = get_ans_env_var("{}_EXEC_YMLS".format(self.app_name.upper()),must_exists=True)
 
-        self.use_docker = get_env_var("USE_DOCKER")
+        self.use_docker = get_ans_env_var("USE_DOCKER")
 
         # The shared directory is the location in the worker that is temporarily shared with the 
         # Docker execution container.  This is only used if USE_DOCKER is True.
-        self.share_dir = get_env_var("SHARE_DIR",default="/var/tmp/share")
+        self.share_dir = get_ans_env_var("SHARE_DIR",default="/var/tmp/share")
 
         # The state_id is typically automated and provided by the stack calling this script.
-        self.stateful_id = get_env_var("STATEFUL_ID",must_exists=True)
+        self.stateful_id = get_ans_env_var("STATEFUL_ID",must_exists=True)
 
         # stateful_dir
-        self.stateful_dir = get_env_var("STATEFUL_DIR")
+        self.stateful_dir = get_ans_env_var("STATEFUL_DIR")
 
         self.run_dir = os.getcwd()
 
@@ -90,7 +98,7 @@ class Main(ResourceCmdHelper):
 
     def _add_tags(self,resource):
 
-        tags = get_env_var("RESOURCE_TAGS")
+        tags = get_ans_env_var("RESOURCE_TAGS")
         if not tags: return
 
         tags = [ tag.strip() for tag in tags.split(",") ]
@@ -119,14 +127,14 @@ class Main(ResourceCmdHelper):
 
     def _get_env_filepath(self):
 
-        _docker_env_file = get_env_var("DOCKER_ENV_FILE",default=".env")
+        _docker_env_file = get_ans_env_var("DOCKER_ENV_FILE",default=".env")
         self.docker_env_file = os.path.join(os.getcwd(),_docker_env_file)
 
         return self.docker_env_file
 
     def _create_env_file(self):
 
-        docker_env_fields = get_env_var("DOCKER_ENV_FIELDS")
+        docker_env_fields = get_ans_env_var("DOCKER_ENV_FIELDS")
         self._get_env_filepath()
 
         if not docker_env_fields: 
