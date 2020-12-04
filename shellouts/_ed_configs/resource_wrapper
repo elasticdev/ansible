@@ -68,7 +68,7 @@ class Main(ResourceCmdHelper):
 
         # The docker image to execute files
         self.docker_image = get_ans_env_var("DOCKER_EXEC_ENV",default="elasticdev/{}-run-env".format(self.app_name))
-        self.exec_ymls = get_ans_env_var("{}_exec_ymls".format(self.app_name.upper()),must_exists=True)
+        self.exec_ymls = get_ans_env_var("ANS_VAR_exec_ymls",must_exists=True)
         self.use_docker = get_ans_env_var("USE_DOCKER")
 
         # The shared directory is the location in the worker that is temporarily shared with the 
