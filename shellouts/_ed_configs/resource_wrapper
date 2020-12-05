@@ -27,91 +27,23 @@ from ed_helper_publisher.loggerly import ElasticDevLogger
 from ed_helper_publisher.resource_manage import ResourceCmdHelper
 #from ed_helper_publisher.output import convert_ed_output_to_values
 
-class MissingEnvironmentVariable(Exception):
-    pass
-
-def get_ans_env_var(variable,default=None,must_exists=None):
-
-    _value = os.environ.get(variable)
-    if _value: return _value
-
-    _value = os.environ.get("ANS_VAR_{}".format(variable))
-    if _value: return _value
-
-    _value = os.environ.get("ANS_VAR_{}".format(variable.lower()))
-    if _value: return _value
-
-    _value = os.environ.get("ANS_VAR_{}".format(variable.upper()))
-    if _value: return _value
-
-    if default: return default
-
-    if not must_exists: return
-    raise MissingEnvironmentVariable("{} does not exist".format(variable))
-
+# Testingyoyo
 class Main(ResourceCmdHelper):
 
     def __init__(self,**kwargs):
 
-        ResourceCmdHelper.__init__(self)
+        ResourceCmdHelper.__init__(self,app_name="ansible",must_exists=["stateful_id"])
 
         self.app_name = 'ansible'
         self.classname = '{}Wrapper'.format(self.app_name)
 
         self.logger = ElasticDevLogger(self.classname,logcategory="cloudprovider")
         self.logger.debug("Instantiating %s" % self.classname)
-
-        self.working_subdir = get_ans_env_var("{}_DIR".format(self.app_name.upper()),default="/var/tmp/{}".format(self.app_name))
-        if self.working_subdir[0] == "/": self.working_subdir = self.working_subdir[1:]
-
-        self.shelloutconfig = "elasticdev:::{}::resource_wrapper".format(self.app_name)
-
-        # The docker image to execute files
-        self.docker_image = get_ans_env_var("DOCKER_EXEC_ENV",default="elasticdev/{}-run-env".format(self.app_name))
-        self.exec_ymls = get_ans_env_var("ANS_VAR_exec_ymls",must_exists=True)
-        self.use_docker = get_ans_env_var("USE_DOCKER")
-
-        # The shared directory is the location in the worker that is temporarily shared with the 
-        # Docker execution container.  This is only used if USE_DOCKER is True.
-        self.share_dir = get_ans_env_var("SHARE_DIR",default="/var/tmp/share")
-
-        # The state_id is typically automated and provided by the stack calling this script.
-        self.stateful_id = get_ans_env_var("STATEFUL_ID",must_exists=True)
-
-        # stateful_dir
-        self.stateful_dir = get_ans_env_var("STATEFUL_DIR")
-
-        self.run_dir = os.getcwd()
-
-        # run_share_dir
-        if self.stateful_id:
-            #self.run_share_dir = os.path.join(self.share_dir,self.stateful_id)
-            self.app_dir = os.path.join(self.share_dir,self.stateful_id)
-        else:
-            self.app_dir = "{}/{}".format(self.run_dir,self.working_subdir)
-
-    #def _execute(self,cmd,output_to_json=False,exit_error=True,**kwargs):
-    #    return self.execute(cmd,output_to_json=output_to_json,exit_error=exit_error)
-    #    return self.execute4(cmd,output_to_json=output_to_json,exit_error=exit_error)
-
-    def _add_tags(self,resource):
-
-        tags = get_ans_env_var("RESOURCE_TAGS")
-        if not tags: return
-
-        tags = [ tag.strip() for tag in tags.split(",") ]
-        if not isinstance(resource.get("tags"),list): resource["tags"] = []
-        resource["tags"].extend(tags)
-        resource["tags"].append("ansible")
-
-        # remove duplicates
-        resource["tags"] = list(set(resource["tags"]))
- 
-        return resource
+        self.exec_ymls = self.get_env_var("exec_ymls",must_exists=True)
 
     def _exec_local_create(self):
 
-        os.chdir(self.app_dir)
+        os.chdir(self.run_share_dir)
 
         base_cmd = 'ansible-playbook -i hosts'
 
@@ -125,14 +57,14 @@ class Main(ResourceCmdHelper):
 
     def _get_env_filepath(self):
 
-        _docker_env_file = get_ans_env_var("DOCKER_ENV_FILE",default=".env")
+        _docker_env_file = self.get_env_var("DOCKER_ENV_FILE",default=".env")
         self.docker_env_file = os.path.join(os.getcwd(),_docker_env_file)
 
         return self.docker_env_file
 
     def _create_env_file(self):
 
-        docker_env_fields = get_ans_env_var("DOCKER_ENV_FIELDS")
+        docker_env_fields = self.get_env_var("DOCKER_ENV_FIELDS")
         self._get_env_filepath()
 
         if not docker_env_fields: 
@@ -158,17 +90,17 @@ class Main(ResourceCmdHelper):
 
         self._create_env_file()
 
-        os.chdir(self.app_dir)
+        os.chdir(self.run_share_dir)
 
         if os.path.exists(self.docker_env_file):
             cmd = 'docker run -e ANSIBLE_EXEC_YMLS="{}" --env-file {} --rm -v {}:{} {}'.format(self.exec_ymls,
                                                                                                self.docker_env_file,
-                                                                                               self.app_dir,
+                                                                                               self.run_share_dir,
                                                                                                self.share_dir,
                                                                                                self.docker_image)
         else:
             cmd = 'docker run -e ANSIBLE_EXEC_YMLS="{}" --rm -v {}:{} {}'.format(self.exec_ymls,
-                                                                                 self.app_dir,
+                                                                                 self.run_share_dir,
                                                                                  self.share_dir,
                                                                                  self.docker_image)
 
@@ -182,8 +114,8 @@ class Main(ResourceCmdHelper):
             self.logger.error("STATEFUL_ID needs to be set for using of docker run environments")
             exit(9)
 
-        if not os.path.exists(self.app_dir):
-            self.logger.warn("ansible directory must exists at {} - something went wrong".format(self.app_dir))
+        if not os.path.exists(self.run_share_dir):
+            self.logger.warn("ansible directory must exists at {} - something went wrong".format(self.run_share_dir))
             os.chdir(self.run_dir)
             exit(9)
 
