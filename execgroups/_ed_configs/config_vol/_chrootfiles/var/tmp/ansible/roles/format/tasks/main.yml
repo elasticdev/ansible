@@ -1,5 +1,0 @@
----
-- name: Format volume
-  filesystem:
-    dev: "{{ device_name }}"
-    fstype: "{{ fstype }}"
