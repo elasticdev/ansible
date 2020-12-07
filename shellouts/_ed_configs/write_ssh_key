@@ -26,7 +26,9 @@ class Main(ResourceCmdHelper):
 
     def __init__(self,**kwargs):
 
-        ResourceCmdHelper.__init__(self)
+        # Testingyoyo
+        ResourceCmdHelper.__init__(self,app_name="ansible",must_exists=["stateful_id"])
+
         self.classname = 'MONGODB_ANSIBLE_PRIVATE_KEY'
         self.logger = ElasticDevLogger(self.classname,logcategory="cloudprovider")
         self.logger.debug("Instantiating %s" % self.classname)
@@ -39,59 +41,42 @@ class Main(ResourceCmdHelper):
                          "method" ]
 
         self.set_inputargs(set_env_vars=set_env_vars,upper_case=None)
-        self._re_map_ansible_vars()
 
-    def _re_map_ansible_vars(self):
+        # if you want to remap vars for the application in the inputargs
+        # e.g. ANS_VAR_mongodb_public_ips to mongodb_public_ips
+        self.remap_app_vars()
 
-        for _key,_value in self.inputargs.iteritems():
-            if "ANS_VAR_" not in _key: continue
-            _mapped_key = _key.split("ANS_VAR_")[-1]
-            self.logger.debug("mapped key {} value {}".format(_key,_value))
-            self.inputargs[_mapped_key] = _value
-            del self.inputargs[_key]
-
-    def _set_vars(self):
-
-        self.run_dir = os.getcwd()
-
-        working_subdir = self.inputargs.get("ansible_dir","/var/tmp/ansible")
-        if working_subdir[0] == "/": working_subdir = working_subdir[1:]
-
-        self.app_dir = "{}/{}".format(self.run_dir,working_subdir)
-
-        # stateful_id 
         # Testingyoyo
-        self.stateful_id = os.environ.get("STATEFUL_ID")
-        if not self.stateful_id: self.stateful_id = id_generator(20)
+        # delete below
+        #self._re_map_ansible_vars()
 
-        # stateful_dir 
-        self.share_dir = os.environ.get("SHARE_DIR","/var/tmp/share")
+    # Testingyoyo
+    # delete below
+    #def _re_map_ansible_vars(self):
 
-        if self.stateful_id:
-            self.run_share_dir = os.path.join(self.share_dir,self.stateful_id)
-        else:
-            self.run_share_dir = None
-
-    def _write_file(self,key,filepath):
-
-        if not self.inputargs.get(key): return
-
-        with open(filepath,"wb") as wfile:
-            for _line in self.inputargs[key].split('\\n'):
-                wfile.write(_line)
-                wfile.write("\n")
+    #    for _key,_value in self.inputargs.iteritems():
+    #        if "ANS_VAR_" not in _key: continue
+    #        _mapped_key = _key.split("ANS_VAR_")[-1]
+    #        self.logger.debug("mapped key {} value {}".format(_key,_value))
+    #        self.inputargs[_mapped_key] = _value
+    #        del self.inputargs[_key]
 
     def _create_ssh_key(self):
 
-        filepath = "{}/ssh_key.pem".format(self.app_dir)
-        self._write_file("private_key",filepath)
-        os.system("chmod 400 {}".format(filepath))
-        
+        #filepath = "{}/ssh_key.pem".format(self.app_dir)
+        #copy_to_share=True)
+
+        filepath = "{}/ssh_key.pem".format(self.run_share_dir)
+
+        self.write_key_to_file(key="private_key",
+                               filepath=filepath,
+                               split_char="return",
+                               add_return=True,
+                               permission=400)
+
     def create(self):
 
-        self._set_vars()
         self._create_ssh_key()
-        self._sync_to_share()
 
 def usage():
 
