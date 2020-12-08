@@ -47,9 +47,8 @@ class Main(ResourceCmdHelper):
 
     def create(self):
 
-        #filepath = "{}/ssh_key.pem".format(self.run_share_dir)
-
-        filepath = "{}/ssh_key.pem".format(self.app_dir)
+        #filepath = "{}/ssh_key.pem".format(self.app_dir)
+        filepath = "{}/ssh_key.pem".format(self.run_share_dir)
 
         self.write_key_to_file(key="private_key",
                                filepath=filepath,

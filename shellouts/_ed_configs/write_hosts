@@ -47,10 +47,10 @@ class Main(ResourceCmdHelper):
 
     def create(self):
 
-        # copy directly to run shared directory
-        #filepath = "{}/hosts".format(self.run_share_dir)
+        #filepath = "{}/hosts".format(self.app_dir)
 
-        filepath = "{}/hosts".format(self.app_dir)
+        # Write file directly into run_share_dir
+        filepath = "{}/hosts".format(self.run_share_dir)
         _file = open(filepath,"w")
 
         _ips = self.inputargs["host_ips"].split(",")
