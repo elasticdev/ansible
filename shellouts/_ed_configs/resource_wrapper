@@ -119,6 +119,10 @@ class Main(ResourceCmdHelper):
             os.chdir(self.run_dir)
             exit(9)
 
+        # sync to share and then execute the actions 
+        # from the shared directory
+        self.sync_to_share(exclude_existing=True)
+
         if self.inputargs.get("use_docker"): 
             results = self._exec_docker_run()
         else:
