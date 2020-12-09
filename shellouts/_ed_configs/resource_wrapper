@@ -126,12 +126,12 @@ class Main(ResourceCmdHelper):
         else:
             results = self._exec_local_create()
 
-        if results.get("output"):
+        if results and results.get("output"):
             self.logger.debug(results.get("output"))
 
         os.chdir(self.run_dir)
 
-        if results.get("status") is False: exit(19)
+        if results and results.get("status") is False: exit(19)
 
 def usage():
 
