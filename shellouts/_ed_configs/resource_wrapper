@@ -116,7 +116,7 @@ class Main(ResourceCmdHelper):
 
         if not os.path.exists(self.run_share_dir):
             self.logger.warn("ansible directory must exists at {} - something went wrong".format(self.run_share_dir))
-            os.chdir(self.run_dir)
+            os.chdir(self.current_dir)
             exit(9)
 
         #self.sync_to_share(exclude_existing=True)
@@ -129,7 +129,7 @@ class Main(ResourceCmdHelper):
         if results and results.get("output"):
             self.logger.debug(results.get("output"))
 
-        os.chdir(self.run_dir)
+        os.chdir(self.current_dir)
 
         if results and results.get("status") is False: exit(19)
 

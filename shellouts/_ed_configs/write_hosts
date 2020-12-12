@@ -47,7 +47,7 @@ class Main(ResourceCmdHelper):
 
     def create(self):
 
-        #filepath = "{}/hosts".format(self.app_dir)
+        #filepath = "{}/hosts".format(self.exec_dir)
 
         # Write file directly into run_share_dir
         filepath = "{}/hosts".format(self.run_share_dir)
