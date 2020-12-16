@@ -27,7 +27,6 @@ from ed_helper_publisher.loggerly import ElasticDevLogger
 from ed_helper_publisher.resource_manage import ResourceCmdHelper
 #from ed_helper_publisher.output import convert_ed_output_to_values
 
-# Testingyoyo
 class Main(ResourceCmdHelper):
 
     def __init__(self,**kwargs):
