@@ -42,7 +42,7 @@ class Main(ResourceCmdHelper):
 
     def _exec_local_create(self):
 
-        os.chdir(self.run_share_dir)
+        os.chdir(self.exec_dir)
 
         base_cmd = 'ansible-playbook -i hosts'
 
@@ -57,7 +57,10 @@ class Main(ResourceCmdHelper):
     def _get_env_filepath(self):
 
         _docker_env_file = self.get_env_var("DOCKER_ENV_FILE",default=".env")
-        self.docker_env_file = os.path.join(os.getcwd(),_docker_env_file)
+
+        # Testingyoyo
+        #self.docker_env_file = os.path.join(os.getcwd(),_docker_env_file)
+        self.docker_env_file = os.path.join(self.exec_dir,_docker_env_file)
 
         return self.docker_env_file
 
