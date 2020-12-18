@@ -47,10 +47,8 @@ class Main(ResourceCmdHelper):
 
     def create(self):
 
-        #filepath = "{}/hosts".format(self.exec_dir)
-
-        # Write file directly into run_share_dir
-        filepath = "{}/hosts".format(self.run_share_dir)
+        #filepath = "{}/hosts".format(self.run_share_dir)
+        filepath = "{}/hosts".format(self.exec_dir)
         _file = open(filepath,"w")
 
         _ips = self.inputargs["host_ips"].split(",")
