@@ -54,20 +54,9 @@ class Main(ResourceCmdHelper):
 
         return 
 
-    def _get_env_filepath(self):
-
-        _docker_env_file = self.get_env_var("DOCKER_ENV_FILE",default=".env")
-
-        # Testingyoyo
-        #self.docker_env_file = os.path.join(os.getcwd(),_docker_env_file)
-        self.docker_env_file = os.path.join(self.exec_dir,_docker_env_file)
-
-        return self.docker_env_file
-
-    def _create_env_file(self):
+    def _create_docker_env_file(self):
 
         docker_env_fields = self.get_env_var("DOCKER_ENV_FIELDS")
-        self._get_env_filepath()
 
         if not docker_env_fields: 
             self.logger.debug("No docker env fields specifield - skipping to create environment file")
@@ -86,11 +75,9 @@ class Main(ResourceCmdHelper):
 
         f.close()
 
-        return self.docker_env_file
-
     def _exec_docker_run(self):
 
-        self._create_env_file()
+        self._create_docker_env_file()
 
         os.chdir(self.run_share_dir)
 
@@ -112,8 +99,8 @@ class Main(ResourceCmdHelper):
 
     def create(self):
 
-        if self.use_docker and not self.stateful_id:
-            self.logger.error("STATEFUL_ID needs to be set for using of docker run environments")
+        if not self.stateful_id:
+            self.logger.error("STATEFUL_ID needs to be set")
             exit(9)
 
         if not os.path.exists(self.run_share_dir):
@@ -123,7 +110,7 @@ class Main(ResourceCmdHelper):
 
         #self.sync_to_share(exclude_existing=True)
 
-        if self.inputargs.get("use_docker"): 
+        if self.inputargs.get("use_docker",True): 
             results = self._exec_docker_run()
         else:
             results = self._exec_local_create()
@@ -156,7 +143,6 @@ environmental variables:
         METHOD - create
 
         ANSIBLE_DIR (optional) - we use the ansible directory relative to execution directory
-        WORKING_SUBDIR (optional) - if ANSIBLE_DIR not set, we use the WORKING_SUBDIR to reference ansible build environment
 
     create:
         RESOURCE_TYPE
@@ -177,13 +163,7 @@ if __name__ == '__main__':
     if json_input:
         main.set_inputargs(json_input=json_input)
     else:
-        set_env_vars = [ "method",
-                         "use_docker",
-                         "working_dir",
-                         "ansible_dir",
-                         "resource_type",
-                         "resource_tags" ]
-
+        set_env_vars = [ "method" ]
         main.set_inputargs(set_env_vars=set_env_vars)
    
     method = main.inputargs.get("method")
