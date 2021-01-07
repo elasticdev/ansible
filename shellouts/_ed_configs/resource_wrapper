@@ -111,6 +111,7 @@ class Main(ResourceCmdHelper):
         #self.sync_to_share(exclude_existing=True)
 
         if self.inputargs.get("use_docker",True): 
+            self.logger.debug("Using docker for executing ansible playbook")
             results = self._exec_docker_run()
         else:
             results = self._exec_local_create()
