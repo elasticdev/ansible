@@ -53,6 +53,7 @@ class Main(ResourceCmdHelper):
         self.write_key_to_file(key="private_key",
                                filepath=filepath,
                                split_char="return",
+                               deserialize=True,
                                add_return=True,
                                permission=400)
         #copy_to_share=True)
